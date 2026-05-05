@@ -41,12 +41,19 @@ Account::VerifiedView getVerifiedView(Bank &bank) {
     auto pin = prompt<uint32_t>(
         "Enter PIN"); // TODO make PIN not visible while entering
 
-    auto optionalVerifiedView = account.checkPIN(pin);
+    auto verifiedViewOrError = account.checkPIN(pin);
 
-    if (!optionalVerifiedView.has_value())
-      output("Wrong PIN");
+    if (verifiedViewOrError)
+      return verifiedViewOrError.value();
     else
-      return optionalVerifiedView.value();
+      switch (verifiedViewOrError.error()) {
+      case WrongPIN:
+        output("WrongPIN");
+        break;
+      case WaitNotFinished:
+        cout << duration_cast<seconds>(account.getTimeToWait());
+        output(" remaining");
+      }
   }
 }
 
