@@ -1,3 +1,4 @@
+#include <cmath>
 #include <cstdint>
 #include <optional>
 #include <string>
@@ -40,12 +41,17 @@ public:
       return 0;
     }
 
-    void changePIN(uint32_t newPIN) { // TODO add restrictions on PIN
+    bool changePIN(uint32_t newPIN) { // TODO add restrictions on PIN
+      if (ceil(log10(newPIN)) != 6)
+        return 1;
       account.pin = newPIN;
+      return 0;
     }
   };
 
-  Account(string a, uint32_t b, long double c = 0)
+  Account(string a, uint32_t b,
+          long double c = 0) // TODO prevent constructor from constructing
+                             // invalid PINS or negative balances
       : name(a), pin(b), balance(c) {}
 
   optional<VerifiedView>

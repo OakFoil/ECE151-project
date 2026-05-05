@@ -15,7 +15,7 @@ template <typename T> T prompt(string str) {
 
 template <typename T> void output(T out) { cout << out << "\n"; }
 
-Account &getAccount(Bank bank) {
+Account &getAccount(Bank &bank) {
   Account *accountRef = nullptr;
 
   while (true) {
@@ -29,15 +29,15 @@ Account &getAccount(Bank bank) {
       cout << "Invalid Input\n";
     if (accountRef == nullptr)
       output("Invalid ID Or Name");
+    else
+      return *accountRef;
   }
-
-  return *accountRef;
 }
 
-Account::VerifiedView getVerifiedView(Bank bank) {
-  while (true) {
-    auto &account = getAccount(bank);
+Account::VerifiedView getVerifiedView(Bank &bank) {
+  auto &account = getAccount(bank);
 
+  while (true) {
     auto pin = prompt<uint32_t>(
         "Enter PIN"); // TODO make PIN not visible while entering
 
@@ -82,21 +82,28 @@ void handleOperation(Account::VerifiedView verifiedView) {
           return;
         }
       }
-    else if (op == 4) {
-      auto newPIN = prompt<uint32_t>("Enter New PIN");
+    else if (op == 4)
+      while (true) {
+        auto newPIN = prompt<uint32_t>("Enter New PIN");
 
-      verifiedView.changePIN(newPIN);
+        if (verifiedView.changePIN(newPIN))
+          output("PIN must be 6 digits");
 
-      output("PIN Changed Successfully");
-      return;
-    } else
+        else {
+          output("PIN Changed Successfully");
+          return;
+        }
+      }
+    else
       output("Invalid operation");
   }
 }
 
-void uiLoop(Bank bank) { // TODO add option to cancel in each stage
+void uiLoop(Bank &bank) { // TODO add option to cancel in each stage
   auto verifiedView = getVerifiedView(bank);
 
   cout << "Hello ";
   output(verifiedView.account.name);
+
+  handleOperation(verifiedView);
 }
