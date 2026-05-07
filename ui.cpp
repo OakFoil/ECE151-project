@@ -1,116 +1,96 @@
-#include "bank.cpp"
-#include <algorithm>
-#include <iostream>
+#include "ui/account.cpp"
 
-using namespace std;
+// Written By Youssef Hamdy
+void addAccount(Bank &bank) {
+  string accountName;
+  uint32_t pin;
 
-template <typename T> T prompt(string str) {
-  cout << str << ":\n";
+  cout << "Enter account name\n";
+  cin >> accountName;
 
-  T input;
-  cin >> input;
+  cout << "Enter PIN\n";
+  cin >> pin;
 
-  return input;
+  Account newAccount(accountName, pin);
+
+  bank.addAccount(newAccount);
+
+  cout << "Account added successfully\n";
+
+  cout << "Account ID is: " << bank.getID(newAccount) << "\n";
 }
 
-template <typename T> void output(T out) { cout << out << "\n"; }
+// Written By Youssef Hamdy
+void transferMoney(Bank &bank) {
+  unsigned long long senderID;
+  unsigned long long recieverID;
+  uint32_t pin;
+  long double moneySent;
 
-Account &getAccount(Bank &bank) {
-  Account *accountRef = nullptr;
+  cout << "Enter your account ID\n";
+  cin >> senderID;
 
-  while (true) {
-    auto input = prompt<string>("Enter Account ID Or Name");
+  Account *sender = bank.searchAccountByID(senderID);
 
-    if (all_of(input.begin(), input.end(), ::isdigit))
-      accountRef = bank.searchAccountByID(stoull(input));
-    else if (all_of(input.begin(), input.end(), ::isalpha))
-      accountRef = bank.searchAccountByName(input);
-    else
-      cout << "Invalid Input\n";
-    if (accountRef == nullptr)
-      output("Invalid ID Or Name");
-    else
-      return *accountRef;
+  if (sender == nullptr) {
+    cout << "Invalid sender account\n";
+    return;
   }
-}
 
-Account::VerifiedView getVerifiedView(Bank &bank) {
-  auto &account = getAccount(bank);
+  cout << "Enter your PIN\n";
+  cin >> pin;
 
-  while (true) {
-    auto pin = prompt<uint32_t>(
-        "Enter PIN"); // TODO make PIN not visible while entering
+  auto verifiedView = sender->checkPIN(pin);
 
-    auto verifiedViewOrError = account.checkPIN(pin);
-
-    if (verifiedViewOrError)
-      return verifiedViewOrError.value();
-    else
-      switch (verifiedViewOrError.error()) {
-      case WrongPIN:
-        output("WrongPIN");
-        break;
-      case WaitNotFinished:
-        cout << duration_cast<seconds>(account.getTimeToWait());
-        output(" remaining");
-      }
+  if (!verifiedView.has_value()) {
+    cout << "Wrong PIN\n";
+    return;
   }
-}
 
-void handleOperation(Account::VerifiedView verifiedView) {
-  while (true) {
-    auto op =
-        prompt<unsigned int>("1) Get Balance\n2) deposit\n3) withdraw\n4) "
-                             "Change PIN\nEnter Operation");
+  cout << "Enter reciever account ID\n";
+  cin >> recieverID;
 
-    if (op == 1) {
-      cout << "Balance is ";
-      output(verifiedView.getBalance());
-      return;
-    } else if (op == 2)
-      while (true) {
-        auto amount = prompt<long double>("Enter Amount");
+  Account *reciever = bank.searchAccountByID(recieverID);
 
-        if (verifiedView.deposit(amount))
-          output("Invalid Amount");
-        else {
-          output("Amount Deposited Successfully");
-          return;
-        }
-      }
-    else if (op == 3)
-      while (true) {
-        auto amount = prompt<long double>("Enter Amount");
+  if (reciever == nullptr) {
+    cout << "Invalid reciever account ID\n";
+    return;
+  }
 
-        if (verifiedView.withdraw(amount))
-          output("Invalid Amount");
-        else {
-          output("Amount Withdrawn Successfully");
-          return;
-        }
-      }
-    else if (op == 4)
-      while (true) {
-        auto newPIN = prompt<uint32_t>("Enter New PIN");
+  cout << "Enter amount of money to be sent\n";
+  cin >> moneySent;
 
-        if (verifiedView.changePIN(newPIN))
-          output("PIN must be 6 digits");
+  if (verifiedView->withdraw(moneySent)) {
+    cout << "Avilable money is less than needed to be sent\n";
+  } else {
+    reciever->deposit(moneySent);
 
-        else {
-          output("PIN Changed Successfully");
-          return;
-        }
-      }
-    else
-      output("Invalid operation");
+    cout << "Money transferred successfully\n";
   }
 }
 
 void uiLoop(Bank &bank) { // TODO add option to cancel in each stage
-  auto verifiedView = getVerifiedView(bank);
+  while (true) {
+    auto input = prompt<string>(
+        "1) Login\n2) Add Account\n3) Transfer Money\nEnter Operation");
 
-  cout << "Hello ";
-  output(verifiedView.account.name);
+    if (input == "q")
+      return;
 
-  handleOperation(verifiedView);
+    auto op = stoi(input);
+
+    switch (op) {
+    case 1:
+      login(bank);
+      break;
+    case 2:
+      addAccount(bank);
+      break;
+    case 3:
+      transferMoney(bank);
+      break;
+    default:
+      output("Invalid Operation");
+    }
+  }
 }

@@ -30,4 +30,6 @@ public:
 
     return &entries[id];
   }
+
+  void addAccount(Account account) { entries.push_back(account); }
 };

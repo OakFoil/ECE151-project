@@ -37,15 +37,6 @@ public:
       return 0;
     }
 
-    bool deposit(long double amount) {
-      if (amount <= 0)
-        return 1;
-
-      account.balance += amount;
-
-      return 0;
-    }
-
     bool changePIN(uint32_t newPIN) {
       if (newPIN < 1e5 || newPIN >= 1e6)
         return 1;
@@ -58,6 +49,15 @@ public:
           long double c = 0) // TODO prevent constructor from constructing
                              // invalid PINS or negative balances
       : pin(b), balance(c), name(a) {}
+
+  bool deposit(long double amount) {
+    if (amount <= 0)
+      return 1;
+
+    balance += amount;
+
+    return 0;
+  }
 
   auto getTimeToWait() { // TODO simplify delay logic
     if (failedAttempts < 3)
@@ -85,5 +85,5 @@ public:
     return VerifiedView(*this);
   }
 
-  bool operator==(const Account &) const;
+  bool operator==(const Account &) const = default;
 };

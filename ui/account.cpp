@@ -1,0 +1,115 @@
+#include "../bank.cpp"
+#include "utils.cpp"
+#include <algorithm>
+#include <iostream>
+
+using namespace std;
+
+Account &getAccount(Bank &bank) {
+  Account *accountRef = nullptr;
+
+  while (true) {
+    auto input = prompt<string>("Enter Account ID Or Name");
+
+    if (all_of(input.begin(), input.end(), ::isdigit))
+      accountRef = bank.searchAccountByID(stoull(input));
+    else if (all_of(input.begin(), input.end(), ::isalpha))
+      accountRef = bank.searchAccountByName(input);
+    else
+      cout << "Invalid Input\n";
+    if (accountRef == nullptr)
+      output("Invalid ID Or Name");
+    else
+      return *accountRef;
+  }
+}
+
+Account::VerifiedView getVerifiedView(Account &account) {
+  while (true) {
+    auto pin = prompt<uint32_t>(
+        "Enter PIN"); // TODO make PIN not visible while entering
+
+    auto verifiedViewOrError = account.checkPIN(pin);
+
+    if (verifiedViewOrError)
+      return verifiedViewOrError.value();
+    else
+      switch (verifiedViewOrError.error()) {
+      case WrongPIN:
+        output("WrongPIN");
+        break;
+      case WaitNotFinished:
+        cout << duration_cast<seconds>(account.getTimeToWait());
+        output(" remaining");
+      }
+  }
+}
+
+void handleAccountOperation(Account::VerifiedView verifiedView) {
+  while (true) {
+    auto input = prompt<string>("1) Get Balance\n2) deposit\n3) withdraw\n4) "
+                                "Change PIN\nEnter Operation");
+
+    if (input == "q")
+      return;
+    auto op = stoi(input);
+
+    switch (op) {
+    case 1:
+      cout << "Balance is ";
+      output(verifiedView.getBalance());
+      return;
+      break;
+    case 2:
+      while (true) {
+        auto amount = prompt<long double>("Enter Amount");
+
+        if (verifiedView.account.deposit(amount))
+          output("Invalid Amount");
+        else {
+          output("Amount Deposited Successfully");
+          return;
+        }
+      }
+      break;
+    case 3:
+      while (true) {
+        auto amount = prompt<long double>("Enter Amount");
+
+        if (verifiedView.withdraw(amount))
+          output("Invalid Amount");
+        else {
+          output("Amount Withdrawn Successfully");
+          return;
+        }
+      }
+      break;
+    case 4:
+      while (true) {
+        auto newPIN = prompt<uint32_t>("Enter New PIN");
+
+        if (verifiedView.changePIN(newPIN))
+          output("PIN must be 6 digits");
+
+        else {
+          output("PIN Changed Successfully");
+          return;
+        }
+      }
+      break;
+    default:
+      output("Invalid operation");
+    }
+  }
+}
+
+void login(Bank &bank) {
+  auto account = getAccount(bank);
+
+  auto verifiedView = getVerifiedView(account);
+
+  cout << "Hello ";
+  output(verifiedView.account.name);
+
+  handleAccountOperation(verifiedView);
+}
